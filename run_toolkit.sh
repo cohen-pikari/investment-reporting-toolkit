@@ -28,18 +28,10 @@ conn.close()
 "
 echo '[SUCCESS] Relational SQLite tables fully refreshed.'
 
-# 4. Run Advanced SQL Executive Risk Analytics Queries
-echo 'Step 3: Running Production SQL Risk Management Dashboard...'
-python3 -c "
-import sqlite3, pandas as pd
-conn = sqlite3.connect('data/portfolio_warehouse.db')
-q2 = 'SELECT SUM(ABS(i.market_value - COALESCE(c.market_value, 0))) AS Total_Capital_At_Risk, COUNT(*) AS Total_Breaches FROM internal_ledger i LEFT JOIN custodian_statement c ON i.security_id = c.security_id WHERE i.quantity != COALESCE(c.quantity, 0) OR i.market_value != COALESCE(c.market_value, 0);'
-q3 = 'SELECT i.ticker AS Ticker, COUNT(*) AS Total_Incidents, SUM(ABS(i.market_value - COALESCE(c.market_value, 0))) AS Concentrated_Risk FROM internal_ledger i LEFT JOIN custodian_statement c ON i.security_id = c.security_id WHERE i.quantity != COALESCE(c.quantity, 0) OR i.market_value != COALESCE(c.market_value, 0) GROUP BY i.ticker ORDER BY Concentrated_Risk DESC;'
-print(pd.read_sql_query(q2, conn).to_string(index=False))
-print(pd.read_sql_query(q3, conn).to_string(index=False))
-conn.close()
-"
+# 4. Run Advanced SQL Executive Risk Analytics and Generate Management Sheet
+echo 'Step 3: Compiling Relational Database Warehouse Risk Reports...'
+python3 scripts/query_db.py
 
 echo '===================================================='
-echo '✅ PIPELINE RUN COMPLETE - AUDIT SHEETS READY IN /output'
+echo '✅ PIPELINE RUN COMPLETE - ALL AUDIT REPORTS GENERATED IN /output'
 echo '===================================================='
