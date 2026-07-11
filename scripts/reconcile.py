@@ -35,6 +35,8 @@ def run_reconciliation():
         'Pricing / Market Value Break'
     ]
     df_recon['exception_type'] = np.select(conditions, choices, default='Matched')
+    
+    # Isolate active exceptions
     df_exceptions = df_recon[df_recon['exception_type'] != 'Matched'].copy()
     print(f'\n[SUCCESS] Processed reconciliation. Identified {len(df_exceptions)} exceptions.')
     return df_exceptions
@@ -46,53 +48,121 @@ def export_to_excel(df_exceptions):
     ws.title = 'Daily Exceptions'
     ws.sheet_view.showGridLines = True
     
+    # Typography configuration
     font_title = Font(name='Calibri', size=16, bold=True, color='1F497D')
     font_sub = Font(name='Calibri', size=11, italic=True)
+    font_section = Font(name='Calibri', size=12, bold=True, color='1F497D')
     font_header = Font(name='Calibri', size=11, bold=True, color='FFFFFF')
     font_data = Font(name='Calibri', size=11)
     font_bold = Font(name='Calibri', size=11, bold=True)
     
-    fill_header = PatternFill(start_color='1F497D', end_color='1F497D', fill_type='solid')
-    fill_break = PatternFill(start_color='FDE9D9', end_color='FDE9D9', fill_type='solid')
-    thin_border = Border(left=Side(style='thin', color='D9D9D9'), right=Side(style='thin', color='D9D9D9'), top=Side(style='thin', color='D9D9D9'), bottom=Side(style='thin', color='D9D9D9'))
+    # Executive summary styling blocks
+    font_kpi_num = Font(name='Calibri', size=14, bold=True, color='C00000') # Dark Red
+    font_kpi_lbl = Font(name='Calibri', size=10, bold=True, color='595959')
+    fill_kpi = PatternFill(start_color='F2F2F2', end_color='F2F2F2', fill_type='solid')
     
+    # Table background styling layers
+    fill_header = PatternFill(start_color='1F497D', end_color='1F497D', fill_type='solid')
+    fill_row_break = PatternFill(start_color='FDF2F2', end_color='FDF2F2', fill_type='solid') # Soft warning red tint
+    fill_badge_break = PatternFill(start_color='FADBD8', end_color='FADBD8', fill_type='solid') # Darker red warning flag
+    
+    thin_border = Border(left=Side(style='thin', color='D9D9D9'), right=Side(style='thin', color='D9D9D9'), top=Side(style='thin', color='D9D9D9'), bottom=Side(style='thin', color='D9D9D9'))
+    double_bottom_border = Border(bottom=Side(style='double', color='1F497D'))
+    
+    # 1. Main Header Title
     ws['A1'] = 'INVESTMENT OPERATIONS RECONCILIATION REPORT'
     ws['A1'].font = font_title
-    ws['A2'] = 'As-Of Date: 2026-07-10 | Status: Action Required'
+    ws['A2'] = 'As-Of Date: 2026-07-10'
     ws['A2'].font = font_sub
     
-    headers = ['Security ID', 'Ticker', 'Qty (Internal)', 'Qty (Custodian)', 'Qty Variance', 'MV (Internal)', 'MV (Custodian)', 'MV Variance', 'Currency', 'Exception Classification']
-    ws.append([])
-    ws.append(headers)
+    # 2. Programmatically calculate dynamic summary values
+    total_breaks = len(df_exceptions)
+    urgent_breaks = len(df_exceptions[df_exceptions['exception_type'].isin(['Unrecorded Position Break (Missing in Custodian)', 'Cash Balance Break'])])
     
-    for col_idx in range(1, 11):
-        cell = ws.cell(row=4, column=col_idx)
-        cell.font = font_header
-        cell.fill = fill_header
-        cell.alignment = Alignment(horizontal='center', vertical='center')
-        
-    current_row = 5
-    for _, row in df_exceptions.iterrows():
-        row_data = [row['security_id'], row['ticker_internal'], row['quantity_internal'], row['quantity_custodian'], row['qty_variance'], row['market_value_internal'], row['market_value_custodian'], row['mv_variance'], row['currency_internal'], row['exception_type']]
-        ws.append(row_data)
-        for c_idx in range(1, 11):
-            cell = ws.cell(row=current_row, column=c_idx)
-            cell.font = font_data
-            cell.border = thin_border
-            if c_idx in (3, 4, 5):
-                cell.number_format = '#,##0'
-                cell.alignment = Alignment(horizontal='right')
-            elif c_idx in (6, 7, 8):
-                cell.number_format = '$#,##0.00'
-                cell.alignment = Alignment(horizontal='right')
-            elif c_idx == 10:
-                cell.fill = fill_break
-                cell.font = font_bold
-        current_row += 1
+    # 3. Write Executive KPI Dashboard block (Rows 4-5)
+    ws['A4'] = 'TOTAL EXCEPTIONS IDENTIFIED'
+    ws['A4'].font = font_kpi_lbl
+    ws['A4'].fill = fill_kpi
+    ws['A5'] = total_breaks
+    ws['A5'].font = font_kpi_num
+    ws['A5'].fill = fill_kpi
+    ws['A5'].alignment = Alignment(horizontal='center')
+    
+    ws['B4'] = 'URGENT ESCALATIONS REQUIRED'
+    ws['B4'].font = font_kpi_lbl
+    ws['B4'].fill = fill_kpi
+    ws['B5'] = urgent_breaks
+    ws['B5'].font = font_kpi_num
+    ws['B5'].fill = fill_kpi
+    ws['B5'].alignment = Alignment(horizontal='center')
+    
+    # Wrap borders around KPI tiles
+    for col in (1, 2):
+        ws.cell(row=4, column=col).border = thin_border
+        ws.cell(row=5, column=col).border = thin_border
 
+    headers = ['Security ID', 'Ticker', 'Qty (Internal)', 'Qty (Custodian)', 'Qty Variance', 'MV (Internal)', 'MV (Custodian)', 'MV Variance', 'Currency', 'Exception Classification']
+    
+    # Filter rows cleanly into structural business buckets
+    df_cash_breaks = df_exceptions[df_exceptions['security_id'] == 'CASH001']
+    df_holdings_breaks = df_exceptions[df_exceptions['security_id'] != 'CASH001']
+    
+    current_row = 7
+    
+    # Helper processing module to layout structured reconciliation subsections
+    def write_reconciliation_section(title, dataframe, start_r):
+        ws.cell(row=start_r, column=1, value=title).font = font_section
+        ws.cell(row=start_r, column=1).border = double_bottom_border
+        start_r += 1
+        
+        # Append subheader row
+        for c_idx, h_text in enumerate(headers, 1):
+            cell = ws.cell(row=start_r, column=c_idx, value=h_text)
+            cell.font = font_header
+            cell.fill = fill_header
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+        start_r += 1
+        
+        if dataframe.empty:
+            ws.cell(row=start_r, column=1, value='[No exceptions flagged in this processing category]').font = font_sub
+            start_r += 2
+            return start_r
+            
+        for _, row in dataframe.iterrows():
+            row_data = [row['security_id'], row['ticker_internal'], row['quantity_internal'], row['quantity_custodian'], row['qty_variance'], row['market_value_internal'], row['market_value_custodian'], row['mv_variance'], row['currency_internal'], row['exception_type']]
+            
+            for c_idx, val in enumerate(row_data, 1):
+                cell = ws.cell(row=start_r, column=c_idx, value=val)
+                cell.font = font_data
+                cell.border = thin_border
+                cell.fill = fill_row_break  # Full-line operational highlight paint
+                
+                # Number alignment layouts
+                if c_idx in (3, 4, 5):
+                    cell.number_format = '#,##0'
+                    cell.alignment = Alignment(horizontal='right')
+                elif c_idx in (6, 7, 8):
+                    cell.number_format = '$#,##0.00'
+                    cell.alignment = Alignment(horizontal='right')
+                elif c_idx == 10:
+                    cell.fill = fill_badge_break  # Anchor text background color focus
+                    cell.font = font_bold
+            start_r += 1
+            
+        start_r += 2 # Clean block line spacing padding
+        return start_r
+
+    # 4. Generate Section A: Cash Controls
+    current_row = write_reconciliation_section("PART A: CASH LINE-ITEM RECONCILIATION", df_cash_breaks, current_row)
+    
+    # 5. Generate Section B: Custody Asset Controls
+    current_row = write_reconciliation_section("PART B: SECURITIES & HOLDINGS RECONCILIATION", df_holdings_breaks, current_row)
+
+    # Global column margin boundaries
     col_widths = {'A': 16, 'B': 10, 'C': 15, 'D': 16, 'E': 15, 'F': 16, 'G': 16, 'H': 15, 'I': 11, 'J': 45}
     for col_letter, width in col_widths.items():
         ws.column_dimensions[col_letter].width = width
+        
     wb.save(output_path)
     print(f'[SUCCESS] Formatted report cleanly saved to: {output_path}')
 
