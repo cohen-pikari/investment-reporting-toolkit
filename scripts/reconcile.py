@@ -22,6 +22,7 @@ def run_reconciliation():
     
     conditions = [
         (df_recon['security_id'] == 'CASH001') & (df_recon['qty_variance'] != 0),
+        (df_recon['security_id'].str.startswith('UNLISTED_')) & (df_recon['qty_variance'] == 0) & (df_recon['mv_variance'] != 0),
         (df_recon['ticker_internal'] == 'MSFT') & (df_recon['qty_variance'] == 12),
         (df_recon['ticker_internal'] == 'NVDA') & (df_recon['qty_variance'] == 0) & (df_recon['mv_variance'] != 0),
         (df_recon['ticker_internal'] == 'AAPL') & (df_recon['qty_variance'] == 0) & (df_recon['mv_variance'] != 0),
@@ -32,6 +33,7 @@ def run_reconciliation():
     ]
     choices = [
         'Cash Balance Break',
+        'Unlisted Asset Valuation Lag (Stale Custody Price Certificate)',
         'Corporate Action / Dividend Reinvestment Lag',
         'FX Valuation Rate Mismatch (USD/AUD Stale Pricing)',
         'Corporate Action / Dividend Income Lag',
@@ -72,7 +74,7 @@ def export_to_excel(df_exceptions):
     
     ws['A1'] = 'INVESTMENT OPERATIONS RECONCILIATION REPORT'
     ws['A1'].font = font_title
-    ws['A2'] = 'As-Of Date: 2026-07-14'
+    ws['A2'] = 'As-Of Date: 2026-07-15'
     ws['A2'].font = font_sub
     
     total_breaks = len(df_exceptions)
