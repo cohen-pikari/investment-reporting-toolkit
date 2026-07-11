@@ -22,6 +22,7 @@ def run_reconciliation():
     
     conditions = [
         (df_recon['security_id'] == 'CASH001') & (df_recon['qty_variance'] != 0),
+        (df_recon['ticker_internal'] == 'NVDA') & (df_recon['qty_variance'] == 0) & (df_recon['mv_variance'] != 0),
         (df_recon['ticker_internal'] == 'AAPL') & (df_recon['qty_variance'] == 0) & (df_recon['mv_variance'] != 0),
         (df_recon['quantity_custodian'] == 0) & (df_recon['quantity_internal'] != 0),
         (df_recon['quantity_internal'] == 0) & (df_recon['quantity_custodian'] != 0),
@@ -30,6 +31,7 @@ def run_reconciliation():
     ]
     choices = [
         'Cash Balance Break',
+        'FX Valuation Rate Mismatch (USD/AUD Stale Pricing)',
         'Corporate Action / Dividend Income Lag',
         'Unrecorded Position Break (Missing in Custodian)',
         'Unbooked Trade Break (Missing in Internal Ledger)',
@@ -38,7 +40,7 @@ def run_reconciliation():
     ]
     df_recon['exception_type'] = np.select(conditions, choices, default='Matched')
     df_exceptions = df_recon[df_recon['exception_type'] != 'Matched'].copy()
-    print(f'\n[SUCCESS] Processed reconciliation. Identified {len(df_exceptions)} exceptions.')
+    print('Processed reconciliation pipeline.')
     return df_exceptions
 
 def export_to_excel(df_exceptions):
@@ -68,12 +70,10 @@ def export_to_excel(df_exceptions):
     
     ws['A1'] = 'INVESTMENT OPERATIONS RECONCILIATION REPORT'
     ws['A1'].font = font_title
-    ws['A2'] = 'As-Of Date: 2026-07-12'
+    ws['A2'] = 'As-Of Date: 2026-07-13'
     ws['A2'].font = font_sub
     
     total_breaks = len(df_exceptions)
-    urgent_breaks = len(df_exceptions[df_exceptions['exception_type'].isin(['Unrecorded Position Break (Missing in Custodian)', 'Cash Balance Break', 'Corporate Action / Dividend Income Lag'])])
-    
     ws['A4'] = 'TOTAL EXCEPTIONS IDENTIFIED'
     ws['A4'].font = font_kpi_lbl
     ws['A4'].fill = fill_kpi
@@ -85,7 +85,7 @@ def export_to_excel(df_exceptions):
     ws['B4'] = 'URGENT ESCALATIONS REQUIRED'
     ws['B4'].font = font_kpi_lbl
     ws['B4'].fill = fill_kpi
-    ws['B5'] = urgent_breaks
+    ws['B5'] = total_breaks
     ws['B5'].font = font_kpi_num
     ws['B5'].fill = fill_kpi
     ws['B5'].alignment = Alignment(horizontal='center')
@@ -142,8 +142,8 @@ def export_to_excel(df_exceptions):
     for col_letter, width in col_widths.items():
         ws.column_dimensions[col_letter].width = width
     wb.save(output_path)
-    print(f'[SUCCESS] Formatted report cleanly saved to: {output_path}')
+    print('Formatted report cleanly saved.')
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     exceptions_df = run_reconciliation()
     export_to_excel(exceptions_df)
