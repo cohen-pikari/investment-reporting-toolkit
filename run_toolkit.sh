@@ -1,37 +1,24 @@
 #!/bin/bash
 
-# ==============================================================================
-# MASTER OPERATIONS PIPELINE CONTROLLER - INVESTMENT REPORTING TOOLKIT
-# ==============================================================================
+# Define corporate layout colors
+BLUE='\033[0;34m'
+GREEN='\033[0;32m'
+CYAN='\033[0;36m'
+CLEAR='\033[0m'
 
-echo '===================================================='
-echo '🚀 INITIALIZING AUTOMATED INVESTMENT REPORTING TOOLKIT'
-echo '===================================================='
+echo -e "${BLUE}====================================================================${CLEAR}"
+echo -e "${BLUE}🚀 INITIALIZING INTEGRATED INVESTMENT OPERATIONS REPORTING TOOLKIT ${CLEAR}"
+echo -e "${BLUE}====================================================================${CLEAR}"
 
-# 1. Ensure virtual environment is active
-if [ -d 'venv' ]; then
-    source venv/bin/activate
-fi
+echo -e "\n${CYAN}[STEP 1/3] Executing Live Market Data Ingestion & Pricing Reconciliation Engine...${CLEAR}"
+python3 scripts/reconcile_live_feeds.py
 
-# 2. Execute primary Python reconciliation and excel spreadsheet generation
-echo 'Step 1: Running Python pandas/openpyxl Reconciliation Pipeline...'
-python3 scripts/reconcile.py
+echo -e "\n${CYAN}[STEP 2/3] Generating Executive MIS Operations Dashboard Visuals...${CLEAR}"
+python3 scripts/generate_ops_dashboard.py
 
-# 3. Synchronize local relational SQL database warehouse tables
-echo 'Step 2: Syncing Variation Data to SQLite Warehouse...'
-python3 -c "
-import os, sqlite3, pandas as pd
-conn = sqlite3.connect('data/portfolio_warehouse.db')
-pd.read_csv('data/internal_ledger.csv').to_sql('internal_ledger', conn, if_exists='replace', index=False)
-pd.read_csv('data/custodian_statement.csv').to_sql('custodian_statement', conn, if_exists='replace', index=False)
-conn.close()
-"
-echo '[SUCCESS] Relational SQLite tables fully refreshed.'
+echo -e "\n${CYAN}[STEP 3/3] Compiling Formatted Corporate Audit Spreadsheet Ledger...${CLEAR}"
+python3 scripts/generate_excel_sheets.py
 
-# 4. Run Advanced SQL Executive Risk Analytics and Generate Management Sheet
-echo 'Step 3: Compiling Relational Database Warehouse Risk Reports...'
-python3 scripts/query_db.py
-
-echo '===================================================='
-echo '✅ PIPELINE RUN COMPLETE - ALL AUDIT REPORTS GENERATED IN /output'
-echo '===================================================='
+echo -e "\n${GREEN}====================================================================${CLEAR}"
+echo -e "${GREEN}✅ PIPELINE INTEGRATION RUN COMPLETE - ALL ARTIFACTS READY IN /output ${CLEAR}"
+echo -e "${GREEN}====================================================================${CLEAR}"
