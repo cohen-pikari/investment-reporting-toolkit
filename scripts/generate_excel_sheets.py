@@ -6,7 +6,6 @@ from openpyxl.utils import get_column_letter
 from datetime import datetime
 
 def generate_formatted_excel():
-    # 🌟 UPGRADE: Querying the relational database warehouse layer directly via SQL
     db_path = "data/portfolio_warehouse.db"
     conn = sqlite3.connect(db_path)
     
@@ -20,14 +19,12 @@ def generate_formatted_excel():
     df_internal = pd.read_sql_query(query, conn)
     conn.close()
     
-    # Simulate matching custodian external truth values
     custodian_mv_map = {
         'AAPL': 326590.00,
         'BHP.AX': 290058.00,
         'ALT-VC-PRV': 475000.00
     }
     
-    # Reconstruct the tracking sheets logic on top of database outputs
     df_internal['Custodian MV ($)'] = df_internal['Ticker'].map(custodian_mv_map)
     df_internal['Net Variance ($)'] = df_internal['Custodian MV ($)'] - df_internal['Internal MV ($)']
     
@@ -38,11 +35,10 @@ def generate_formatted_excel():
         
     df_internal['Exception Type'] = df_internal.apply(classify_exception, axis=1)
     
-    # Execute identical layout formatting matrices
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Daily Exception Summary"
-    ws.views.sheetView.showGridLines = True
+    ws.sheet_view.showGridLines = True
     
     font_title = Font(name='Calibri', size=16, bold=True, color='1F497D')
     font_header = Font(name='Calibri', size=11, bold=True, color='FFFFFF')
@@ -82,18 +78,21 @@ def generate_formatted_excel():
             cell.font = font_data
             cell.border = border_cell
             
-            if col_idx in:
+            if col_idx == 1 or col_idx == 6:
                 cell.alignment = align_center
-            elif col_idx in:
+            elif col_idx >= 3 and col_idx <= 5:
                 cell.alignment = align_right
                 cell.number_format = '$#,##0.00'
             else:
                 cell.alignment = align_left
-                
-            if row_data[5] == 'PRICING_BREAK' and col_idx in:
-                cell.fill = fill_break
-            elif row_data[5] == 'ALTERNATIVES_VALUATION_LAG' and col_idx in:
-                cell.fill = fill_lag
+
+            # Direct check using the cell text loop parameter
+            if value == 'PRICING_BREAK':
+                ws.cell(row=row_idx, column=5).fill = fill_break
+                ws.cell(row=row_idx, column=6).fill = fill_break
+            elif value == 'ALTERNATIVES_VALUATION_LAG':
+                ws.cell(row=row_idx, column=5).fill = fill_lag
+                ws.cell(row=row_idx, column=6).fill = fill_lag                
 
     total_row = len(df_internal) + 5
     ws.cell(row=total_row, column=1, value="Total Exposure").font = font_total
@@ -107,9 +106,14 @@ def generate_formatted_excel():
     calc_cell.alignment = align_right
     calc_cell.number_format = '$#,##0.00'
     
-    for col in ws.columns:
-        max_len = max(len(str(cell.value or '')) for cell in col)
-        col_letter = get_column_letter(col.column)
+    # Fixed Column width mapping block using clean coordinate letters
+    for col_idx in range(1, len(df_internal.columns) + 1):
+        col_letter = get_column_letter(col_idx)
+        max_len = 0
+        for row_idx in range(1, total_row + 1):
+            cell_val = ws.cell(row=row_idx, column=col_idx).value
+            if cell_val:
+                max_len = max(max_len, len(str(cell_val)))
         ws.column_dimensions[col_letter].width = max(max_len + 3, 12)
         
     wb.save("output/portfolio_exception_sheet.xlsx")
