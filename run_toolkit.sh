@@ -14,7 +14,7 @@ echo -e "\n${CYAN}[STEP 1/4] Initializing Production SQL Warehouse Layer...${CLE
 python3 scripts/initialize_warehouse.py
 
 echo -e "\n${CYAN}[STEP 2/4] Executing Live Market Data Ingestion & Pricing Reconciliation Engine...${CLEAR}"
-python3 scripts/reconcile_live_feeds.py
+python3 scripts/reconcile_synthetic_data.py
 
 echo -e "\n${CYAN}[STEP 3/4] Generating Executive MIS Operations Dashboard Visuals...${CLEAR}"
 python3 scripts/generate_ops_dashboard.py
