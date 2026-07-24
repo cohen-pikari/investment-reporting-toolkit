@@ -21,18 +21,16 @@ The synthetic dataset spans **~34 positions across five asset classes** — AU E
 - **Audit-ready output** — formatted, colour-coded Excel exception reports and an executive MIS dashboard, generated directly from the reconciliation output.
 
 ## System Architecture
-investment-reporting-toolkit/
-├── data/ synthetic portfolio & warehouse data (generated)
-├── output/ generated exception reports, dashboards, warehouse extracts
-├── scripts/
-│ ├── generate_synthetic_data.py builds the synthetic multi-asset IBOR/CBOR datasets
-│ ├── initialize_warehouse.py loads reconciliation output into SQLite
-│ ├── query_warehouse.sql SQL risk aggregation queries (capital at risk, STP rate, concentration)
-│ ├── generate_ops_dashboard.py renders the executive MIS dashboard
-│ ├── generate_excel_sheets.py generates the formatted exception report
-│ └── generate_sql_summary.py generates the SQL-driven management summary workbook
-├── reconciliation_engine.py core reconciliation & exception classification logic
-└── run_toolkit.sh orchestrates the full pipeline end-to-end
+
+- **`data/`** — synthetic portfolio & warehouse data (generated)
+- **`output/`** — generated exception reports, dashboards, warehouse extracts
+- **`scripts/`**
+  - `generate_synthetic_data.py` — builds the synthetic multi-asset IBOR/CBOR datasets
+  - `initialize_warehouse.py` — loads reconciliation output into SQLite
+  - `query_warehouse.sql` — SQL risk aggregation queries (capital at risk, STP rate, concentration)
+  - `generate_ops_dashboard.py` — renders the executive MIS dashboard
+  - `generate_excel_sheets.py` — generates the formatted exception report
+  - `generate_sql_summary.py` — generates
 
 ## Execution Guide
 
