@@ -1,61 +1,43 @@
 -- ==============================================================================
--- INVESTMENT OPERATIONS DATA WAREHOUSE AUDIT PIPELINE
--- Workflow: Reconcile Internal Ledger (IBOR) vs Custodian Statements (CBOR)
--- Target Lane: Identify Cash and Position Exception Breaks across Holdings
+-- INVESTMENT OPERATIONS DATA WAREHOUSE — RISK AGGREGATION QUERIES
+-- Source: reconciliation_matrix (SQLite), populated by initialize_warehouse.py
 -- ==============================================================================
 
--- 📊 AUDIT QUERY 1: CORE RECONCILIATION MATCHING ENGINE
--- Joins the ledgers via an operational UNION set to isolate every discrepancy.
-SELECT 
-    i.security_id AS [Security ID], 
-    i.ticker AS [Ticker], 
-    i.quantity AS [Qty (Internal)], 
-    COALESCE(c.quantity, 0) AS [Qty (Custodian)],
-    (i.quantity - COALESCE(c.quantity, 0)) AS [Qty Variance], 
-    i.market_value AS [MV (Internal)],
-    COALESCE(c.market_value, 0) AS [MV (Custodian)], 
-    (i.market_value - COALESCE(c.market_value, 0)) AS [MV Variance],
-    'PORTFOLIO LEDGER MATCH' AS [Audit Lane]
-FROM internal_ledger i
-LEFT JOIN custodian_statement c ON i.security_id = c.security_id
-WHERE i.quantity != COALESCE(c.quantity, 0) OR i.market_value != COALESCE(c.market_value, 0)
+-- QUERY 1: Total Capital At Risk (all outstanding exceptions)
+SELECT
+    COUNT(*) AS total_exceptions,
+    SUM(ABS(mv_variance)) AS total_capital_at_risk
+FROM reconciliation_matrix
+WHERE exception_type != 'MATCHED';
 
-UNION
+-- QUERY 2: Exception Concentration by Type
+SELECT
+    exception_type,
+    COUNT(*) AS incident_count,
+    SUM(ABS(mv_variance)) AS concentrated_risk_value
+FROM reconciliation_matrix
+WHERE exception_type != 'MATCHED'
+GROUP BY exception_type
+ORDER BY concentrated_risk_value DESC;
 
-SELECT 
-    c.security_id AS [Security ID], 
-    c.ticker AS [Ticker], 
-    0 AS [Qty (Internal)], 
-    c.quantity AS [Qty (Custodian)],
-    (0 - c.quantity) AS [Qty Variance], 
-    0 AS [MV (Internal)],
-    c.market_value AS [MV (Custodian)], 
-    (0 - c.market_value) AS [MV Variance],
-    'CUSTODIAN STATEMENT UNMATCHED' AS [Audit Lane]
-FROM custodian_statement c
-LEFT JOIN internal_ledger i ON c.security_id = i.security_id
-WHERE i.security_id IS NULL;
+-- QUERY 3: Exception Concentration by Asset Class
+-- Identifies which part of the portfolio is structurally driving the most breaks —
+-- useful for spotting whether a specific asset class needs a process improvement.
+SELECT
+    asset_class,
+    COUNT(*) AS incident_count,
+    SUM(ABS(mv_variance)) AS concentrated_risk_value,
+    ROUND(100.0 * COUNT(*) / (SELECT COUNT(*) FROM reconciliation_matrix WHERE exception_type != 'MATCHED'), 1) AS pct_of_all_exceptions
+FROM reconciliation_matrix
+WHERE exception_type != 'MATCHED'
+GROUP BY asset_class
+ORDER BY concentrated_risk_value DESC;
 
-
--- 💰 AUDIT QUERY 2: TOTAL PORTFOLIO EXPOSURE AT RISK (MANAGEMENT REPORTING)
--- Calculates the total financial impact of all valuation breaks currently outstanding.
--- Uses ABS() so positive and negative variances do not cancel each other out.
-SELECT 
-    SUM(ABS(i.market_value - COALESCE(c.market_value, 0))) AS [Total Portfolio Capital At Risk],
-    COUNT(*) AS [Total Line-Item Breaches]
-FROM internal_ledger i
-LEFT JOIN custodian_statement c ON i.security_id = c.security_id
-WHERE i.quantity != COALESCE(c.quantity, 0) OR i.market_value != COALESCE(c.market_value, 0);
-
-
--- 🔎 AUDIT QUERY 3: SYSTEMIC FAILURE CONCENTRATION ANALYSIS
--- Aggregates data to pinpoint exactly which asset ticker drives the highest risk volume.
-SELECT 
-    i.ticker AS [Ticker Focus],
-    COUNT(*) AS [Total Incidents],
-    SUM(ABS(i.market_value - COALESCE(c.market_value, 0))) AS [Concentrated Variance Exposure]
-FROM internal_ledger i
-LEFT JOIN custodian_statement c ON i.security_id = c.security_id
-WHERE i.quantity != COALESCE(c.quantity, 0) OR i.market_value != COALESCE(c.market_value, 0)
-GROUP BY i.ticker
-ORDER BY [Concentrated Variance Exposure] DESC;
+-- QUERY 4: Straight-Through Processing (STP) Rate
+-- The proportion of the portfolio that matched cleanly with zero manual intervention —
+-- a standard operational KPI for a reconciliation control function.
+SELECT
+    COUNT(*) AS total_positions,
+    SUM(CASE WHEN exception_type = 'MATCHED' THEN 1 ELSE 0 END) AS matched_positions,
+    ROUND(100.0 * SUM(CASE WHEN exception_type = 'MATCHED' THEN 1 ELSE 0 END) / COUNT(*), 1) AS stp_rate_pct
+FROM reconciliation_matrix;

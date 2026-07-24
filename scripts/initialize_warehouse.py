@@ -1,38 +1,43 @@
-import sqlite3
-import os
+"""
+SQLite Warehouse Initializer
+------------------------------
+Loads the full reconciliation matrix (output of reconciliation_engine.py)
+into a relational SQLite warehouse, enabling downstream SQL-based risk
+aggregation and reporting independent of the pandas layer.
+"""
 
-def build_data_warehouse():
-    db_path = "data/portfolio_warehouse.db"
-    
-    # Ensure data directory exists cleanly
+import os
+import sqlite3
+import pandas as pd
+
+
+def build_warehouse(db_path="data/portfolio_warehouse.db",
+                     recon_csv="output/full_reconciliation_matrix.csv"):
     os.makedirs("data", exist_ok=True)
-    
+
+    if not os.path.exists(recon_csv):
+        print(f"Error: {recon_csv} not found. Run reconciliation_engine.py first.")
+        return
+
+    df = pd.read_csv(recon_csv)
+
     conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    
-    # Create production schema layout with explicit constraints
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS internal_ledger (
-            ticker TEXT PRIMARY KEY,
-            security_name TEXT NOT NULL,
-            quantity REAL NOT NULL,
-            unit_cost REAL NOT NULL,
-            market_value REAL NOT NULL
-        )
-    ''')
-    
-    # Seed data arrays matching your thesis positions & watchlist
-    sample_holdings = [
-        ('AAPL', 'Apple Inc.', 1000, 180.00, 180000.00),
-        ('BHP.AX', 'BHP Group Limited', 5000, 42.50, 212500.00),
-        ('ALT-VC-PRV', 'Collins St Private Equity Fund', 1, 500000.00, 500000.00)
-    ]
-    
-    cursor.executemany('INSERT OR REPLACE INTO internal_ledger VALUES (?,?,?,?,?)', sample_holdings)
+    df.to_sql("reconciliation_matrix", conn, if_exists="replace", index=False)
+
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_exception_type
+        ON reconciliation_matrix (exception_type)
+    """)
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS idx_asset_class
+        ON reconciliation_matrix (asset_class)
+    """)
     conn.commit()
     conn.close()
-    print(f"🗄️ SQL Warehouse Layer successfully initialized at: {db_path}")
+
+    print(f"Warehouse initialized: {db_path} ({len(df)} rows loaded into "
+          f"'reconciliation_matrix' table)")
+
 
 if __name__ == "__main__":
-    build_data_warehouse()
-
+    build_warehouse()

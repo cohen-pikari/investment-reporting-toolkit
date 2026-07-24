@@ -1,124 +1,139 @@
+"""
+Executive Excel Exception Report Generator
+---------------------------------------------
+Formats the day's reconciliation exceptions into an audit-ready Excel
+workbook: a KPI summary block, followed by a full itemised exception
+list with conditional colour-coding by exception type. Fully generic —
+scales to however many positions/exceptions the reconciliation run
+actually produced.
+"""
+
+import os
+from datetime import datetime
 import pandas as pd
-import sqlite3
-import openpyxl
+from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
-from datetime import datetime
 
-def generate_formatted_excel():
-    db_path = "data/portfolio_warehouse.db"
-    conn = sqlite3.connect(db_path)
-    
-    query = """
-        SELECT 
-            ticker AS [Ticker],
-            security_name AS [Security Name],
-            market_value AS [Internal MV ($)]
-        FROM internal_ledger
-    """
-    df_internal = pd.read_sql_query(query, conn)
-    conn.close()
-    
-    custodian_mv_map = {
-        'AAPL': 326590.00,
-        'BHP.AX': 290058.00,
-        'ALT-VC-PRV': 475000.00
-    }
-    
-    df_internal['Custodian MV ($)'] = df_internal['Ticker'].map(custodian_mv_map)
-    df_internal['Net Variance ($)'] = df_internal['Custodian MV ($)'] - df_internal['Internal MV ($)']
-    
-    def classify_exception(row):
-        if abs(row['Net Variance ($)']) > 0.01:
-            return 'ALTERNATIVES_VALUATION_LAG' if 'ALT' in row['Ticker'] else 'PRICING_BREAK'
-        return 'NONE'
-        
-    df_internal['Exception Type'] = df_internal.apply(classify_exception, axis=1)
-    
-    wb = openpyxl.Workbook()
+EXCEPTION_COLOURS = {
+    "CASH_BALANCE_BREAK": "F2DCDB",
+    "QUANTITY_BREAK": "F2DCDB",
+    "PRICING_BREAK": "FADBD8",
+    "UNRECORDED_AT_CUSTODIAN": "F2DCDB",
+    "UNBOOKED_INTERNAL_TRADE": "F2DCDB",
+    "UNLISTED_VALUATION_LAG": "FFF2CC",
+    "COUPON_TIMING_LAG": "FFF2CC",
+    "CA_DRP_TIMING_LAG": "FFF2CC",
+    "FX_VALUATION_BREAK": "D6EAF8",
+}
+
+
+def generate_report(exceptions_csv="output/exceptions_only.csv",
+                     output_path="output/exception_report.xlsx"):
+    if not os.path.exists(exceptions_csv):
+        print(f"Error: {exceptions_csv} not found. Run reconciliation_engine.py first.")
+        return
+
+    df = pd.read_csv(exceptions_csv)
+
+    wb = Workbook()
     ws = wb.active
-    ws.title = "Daily Exception Summary"
+    ws.title = "Daily Exceptions"
     ws.sheet_view.showGridLines = True
-    
-    font_title = Font(name='Calibri', size=16, bold=True, color='1F497D')
-    font_header = Font(name='Calibri', size=11, bold=True, color='FFFFFF')
-    font_data = Font(name='Calibri', size=11, bold=False)
-    font_total = Font(name='Calibri', size=11, bold=True, color='1F497D')
-    
-    fill_header = PatternFill(start_color='1F497D', end_color='1F497D', fill_type='solid')
-    fill_break = PatternFill(start_color='F2DCDB', end_color='F2DCDB', fill_type='solid')
-    fill_lag = PatternFill(start_color='FFF2CC', end_color='FFF2CC', fill_type='solid')
-    
-    align_center = Alignment(horizontal='center', vertical='center')
-    align_right = Alignment(horizontal='right', vertical='center')
-    align_left = Alignment(horizontal='left', vertical='center')
-    
-    thin_side = Side(border_style="thin", color="D9D9D9")
-    double_side = Side(border_style="double", color="1F497D")
-    
-    border_cell = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
-    border_total = Border(top=thin_side, bottom=double_side)
-    
-    ws['A1'] = "INVESTMENT OPERATIONS DAILY MIS BREAKSHEET"
-    ws['A1'].font = font_title
-    ws['A2'] = f"Report Date: {datetime.today().strftime('%Y-%m-%d')} | Source: SQL Database Layer"
-    ws['A2'].font = Font(name='Calibri', size=11, italic=True, color='595959')
-    
-    headers = list(df_internal.columns)
-    for col_num, header in enumerate(headers, 1):
-        cell = ws.cell(row=4, column=col_num, value=header)
+
+    font_title = Font(name="Calibri", size=16, bold=True, color="1F497D")
+    font_sub = Font(name="Calibri", size=11, italic=True, color="595959")
+    font_header = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+    font_data = Font(name="Calibri", size=11)
+    font_kpi_num = Font(name="Calibri", size=14, bold=True, color="C00000")
+    font_kpi_lbl = Font(name="Calibri", size=10, bold=True, color="595959")
+
+    fill_header = PatternFill(start_color="1F497D", end_color="1F497D", fill_type="solid")
+    fill_kpi = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+
+    thin = Side(style="thin", color="D9D9D9")
+    border_cell = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    ws["A1"] = "INVESTMENT OPERATIONS DAILY EXCEPTION REPORT"
+    ws["A1"].font = font_title
+    ws["A2"] = f"As-Of Date: {datetime.today().strftime('%Y-%m-%d')} | Source: Reconciliation Engine v2"
+    ws["A2"].font = font_sub
+
+    total_exceptions = len(df)
+    total_risk = df["mv_variance"].abs().sum()
+
+    ws["A4"] = "TOTAL EXCEPTIONS IDENTIFIED"
+    ws["A4"].font = font_kpi_lbl
+    ws["A4"].fill = fill_kpi
+    ws["A5"] = total_exceptions
+    ws["A5"].font = font_kpi_num
+    ws["A5"].fill = fill_kpi
+    ws["A5"].alignment = Alignment(horizontal="center")
+
+    ws["B4"] = "TOTAL CAPITAL AT RISK ($)"
+    ws["B4"].font = font_kpi_lbl
+    ws["B4"].fill = fill_kpi
+    ws["B5"] = total_risk
+    ws["B5"].font = font_kpi_num
+    ws["B5"].fill = fill_kpi
+    ws["B5"].number_format = "$#,##0.00"
+    ws["B5"].alignment = Alignment(horizontal="center")
+
+    for col in (1, 2):
+        ws.cell(row=4, column=col).border = border_cell
+        ws.cell(row=5, column=col).border = border_cell
+
+    headers = ["Security ID", "Ticker", "Security Name", "Asset Class", "Currency",
+               "Qty (Internal)", "Qty (Custodian)", "Qty Variance",
+               "MV (Internal)", "MV (Custodian)", "MV Variance", "Exception Type"]
+
+    header_row = 7
+    for c_idx, h in enumerate(headers, 1):
+        cell = ws.cell(row=header_row, column=c_idx, value=h)
         cell.font = font_header
         cell.fill = fill_header
-        cell.alignment = align_center
+        cell.alignment = Alignment(horizontal="center", vertical="center")
         cell.border = border_cell
-        
-    for row_idx, row_data in enumerate(df_internal.values, 5):
-        for col_idx, value in enumerate(row_data, 1):
-            cell = ws.cell(row=row_idx, column=col_idx, value=value)
+
+    row_map = {
+        "Security ID": "security_id", "Ticker": "ticker", "Security Name": "security_name",
+        "Asset Class": "asset_class", "Currency": "currency",
+        "Qty (Internal)": "quantity_internal", "Qty (Custodian)": "quantity_custodian",
+        "Qty Variance": "qty_variance", "MV (Internal)": "market_value_internal",
+        "MV (Custodian)": "market_value_custodian", "MV Variance": "mv_variance",
+        "Exception Type": "exception_type",
+    }
+
+    r = header_row + 1
+    for _, row in df.iterrows():
+        colour = EXCEPTION_COLOURS.get(row["exception_type"], "FFFFFF")
+        fill = PatternFill(start_color=colour, end_color=colour, fill_type="solid")
+        for c_idx, h in enumerate(headers, 1):
+            val = row[row_map[h]]
+            cell = ws.cell(row=r, column=c_idx, value=val)
             cell.font = font_data
+            cell.fill = fill
             cell.border = border_cell
-            
-            if col_idx == 1 or col_idx == 6:
-                cell.alignment = align_center
-            elif col_idx >= 3 and col_idx <= 5:
-                cell.alignment = align_right
-                cell.number_format = '$#,##0.00'
-            else:
-                cell.alignment = align_left
+            if h in ("Qty (Internal)", "Qty (Custodian)", "Qty Variance"):
+                cell.number_format = "#,##0"
+                cell.alignment = Alignment(horizontal="right")
+            elif h in ("MV (Internal)", "MV (Custodian)", "MV Variance"):
+                cell.number_format = "$#,##0.00"
+                cell.alignment = Alignment(horizontal="right")
+        r += 1
 
-            # Direct check using the cell text loop parameter
-            if value == 'PRICING_BREAK':
-                ws.cell(row=row_idx, column=5).fill = fill_break
-                ws.cell(row=row_idx, column=6).fill = fill_break
-            elif value == 'ALTERNATIVES_VALUATION_LAG':
-                ws.cell(row=row_idx, column=5).fill = fill_lag
-                ws.cell(row=row_idx, column=6).fill = fill_lag                
-
-    total_row = len(df_internal) + 5
-    ws.cell(row=total_row, column=1, value="Total Exposure").font = font_total
-    ws.cell(row=total_row, column=1).border = border_total
-    
-    for c in range(2, 7):
-        ws.cell(row=total_row, column=c).border = border_total
-        
-    calc_cell = ws.cell(row=total_row, column=5, value=f"=SUM(E5:E{total_row-1})")
-    calc_cell.font = font_total
-    calc_cell.alignment = align_right
-    calc_cell.number_format = '$#,##0.00'
-    
-    # Fixed Column width mapping block using clean coordinate letters
-    for col_idx in range(1, len(df_internal.columns) + 1):
+    for col_idx in range(1, len(headers) + 1):
         col_letter = get_column_letter(col_idx)
-        max_len = 0
-        for row_idx in range(1, total_row + 1):
-            cell_val = ws.cell(row=row_idx, column=col_idx).value
-            if cell_val:
-                max_len = max(max_len, len(str(cell_val)))
-        ws.column_dimensions[col_letter].width = max(max_len + 3, 12)
-        
-    wb.save("output/portfolio_exception_sheet.xlsx")
-    print("📊 Formatted Spreadsheet successfully compiled directly from production SQL extraction parameters.")
+        max_len = max(
+            (len(str(ws.cell(row=rr, column=col_idx).value or "")) for rr in range(header_row, r)),
+            default=10,
+        )
+        ws.column_dimensions[col_letter].width = max(max_len + 2, 12)
+
+    os.makedirs("output", exist_ok=True)
+    wb.save(output_path)
+    print(f"Excel exception report saved: {output_path} ({total_exceptions} rows)")
+
 
 if __name__ == "__main__":
-    generate_formatted_excel()
-
+    generate_report()
