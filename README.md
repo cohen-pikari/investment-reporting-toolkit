@@ -1,5 +1,7 @@
 # Investment Operations Reporting Toolkit
 
+**In plain terms:** this project checks whether a fund's own records of what it owns match an independent, outside record of the same holdings — and if they don't match, it works out why, and whether it's a real problem or just expected timing. This is a genuine, everyday function inside investment operations teams.
+
 An automated multi-asset data reconciliation and exception-handling engine built in Python and SQL. This toolkit simulates the core daily control function of an institutional investment operations desk — auditing a fund's internal ledger (**Investment Book of Record / IBOR**) against an independent custodian's records (**Custody Book of Record / CBOR**) across a realistic, multi-asset synthetic portfolio.
 
 ## Project Scope & Operational Impact
