@@ -1,6 +1,6 @@
 # tests/test_reconciliation_integrity.py
 """
-Basic integrity checks for the reconciliation engine — verifies core
+Basic integrity checks for the reconciliation engine: verifies core
 guarantees the system depends on, rather than assuming they hold.
 """
 
