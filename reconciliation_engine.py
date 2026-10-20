@@ -9,7 +9,7 @@ and classifies every discrepancy into a structured exception taxonomy.
 Design principles:
   - Outer join preserves positions missing from either side (never
     silently dropped).
-  - Vectorised classification (np.select) — no row-by-row Python loops —
+  - Vectorised classification (np.select), no row-by-row Python loops,
     so the same logic scales cleanly from a handful of positions to a
     full institutional multi-asset portfolio.
   - Exception types are assigned based on *which fields* disagree
