@@ -1,5 +1,5 @@
 -- ==============================================================================
--- INVESTMENT OPERATIONS DATA WAREHOUSE — RISK AGGREGATION QUERIES
+-- INVESTMENT OPERATIONS DATA WAREHOUSE: RISK AGGREGATION QUERIES
 -- Source: reconciliation_matrix (SQLite), populated by initialize_warehouse.py
 -- ==============================================================================
 
@@ -21,7 +21,7 @@ GROUP BY exception_type
 ORDER BY concentrated_risk_value DESC;
 
 -- QUERY 3: Exception Concentration by Asset Class
--- Identifies which part of the portfolio is structurally driving the most breaks —
+-- Identifies which part of the portfolio is structurally driving the most breaks:
 -- useful for spotting whether a specific asset class needs a process improvement.
 SELECT
     asset_class,
@@ -34,7 +34,7 @@ GROUP BY asset_class
 ORDER BY concentrated_risk_value DESC;
 
 -- QUERY 4: Straight-Through Processing (STP) Rate
--- The proportion of the portfolio that matched cleanly with zero manual intervention —
+-- The proportion of the portfolio that matched cleanly with zero manual intervention:
 -- a standard operational KPI for a reconciliation control function.
 SELECT
     COUNT(*) AS total_positions,
