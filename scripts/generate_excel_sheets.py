@@ -3,7 +3,7 @@ Executive Excel Exception Report Generator
 ---------------------------------------------
 Formats the day's reconciliation exceptions into an audit-ready Excel
 workbook: a KPI summary block, followed by a full itemised exception
-list with conditional colour-coding by exception type. Fully generic —
+list with conditional colour-coding by exception type. Fully generic:
 scales to however many positions/exceptions the reconciliation run
 actually produced.
 """
