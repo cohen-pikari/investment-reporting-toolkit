@@ -4,7 +4,7 @@ Investment Operations Daily MIS Dashboard Generator
 Renders a management-facing visual summary of the day's reconciliation
 run: total capital at risk, exception concentration by type, and
 exception concentration by asset class. Reads directly from the
-reconciliation output — fully generic to however many positions or
+reconciliation output, fully generic to however many positions or
 exception types are present, not hardcoded to specific tickers.
 """
 
