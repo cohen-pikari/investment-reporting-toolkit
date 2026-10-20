@@ -115,14 +115,14 @@ for sec_id, ticker, name, ccy in all_positions:
 base_df = pd.DataFrame(records)
 
 # ---------------------------------------------------------------------------
-# 2. BUILD IBOR (internal ledger) — the clean baseline
+# 2. BUILD IBOR (internal ledger): the clean baseline
 # ---------------------------------------------------------------------------
 
 internal_df = base_df.copy()
 internal_df.insert(0, "trade_date", STATEMENT_DATE)
 
 # ---------------------------------------------------------------------------
-# 3. BUILD CBOR (custodian statement) — clean baseline, then inject breaks
+# 3. BUILD CBOR (custodian statement): clean baseline, then inject breaks
 # ---------------------------------------------------------------------------
 
 custodian_df = base_df.copy()
@@ -131,40 +131,40 @@ custodian_df.insert(0, "statement_date", STATEMENT_DATE)
 n = len(custodian_df)
 idx = custodian_df.set_index("security_id")
 
-# --- Exception 1: Quantity break (pending settlement) — 2 AU equities ---
+# --- Exception 1: Quantity break (pending settlement), 2 AU equities ---
 qty_break_ids = ["AU_EQ_WES", "AU_EQ_TLS"]
 for sid in qty_break_ids:
     idx.loc[sid, "quantity"] = idx.loc[sid, "quantity"] - np.random.randint(200, 800)
     idx.loc[sid, "market_value"] = round(idx.loc[sid, "quantity"] * idx.loc[sid, "unit_price"], 2)
 
-# --- Exception 2: Pricing/valuation break — 2 US equities (custodian stale price feed) ---
+# --- Exception 2: Pricing/valuation break, 2 US equities (custodian stale price feed) ---
 pricing_break_ids = ["US_EQ_META", "US_EQ_JPM"]
 for sid in pricing_break_ids:
     stale_price = round(idx.loc[sid, "unit_price"] * np.random.uniform(0.96, 0.99), 2)
     idx.loc[sid, "unit_price"] = stale_price
     idx.loc[sid, "market_value"] = round(idx.loc[sid, "quantity"] * stale_price, 2)
 
-# --- Exception 3: Cash balance break — AUD cash account (unexplained shortfall) ---
+# --- Exception 3: Cash balance break, AUD cash account (unexplained shortfall) ---
 idx.loc["CASH_AUD", "quantity"] = idx.loc["CASH_AUD", "quantity"] - 48_500
 idx.loc["CASH_AUD", "market_value"] = idx.loc["CASH_AUD", "quantity"]
 
-# --- Exception 4: FX valuation mismatch — 2 USD-denominated holdings ---
+# --- Exception 4: FX valuation mismatch, 2 USD-denominated holdings ---
 fx_mismatch_ids = ["US_EQ_AAPL", "US_EQ_NVDA"]
 for sid in fx_mismatch_ids:
     fx_drift = np.random.uniform(-0.006, 0.006)
     idx.loc[sid, "market_value"] = round(idx.loc[sid, "market_value"] * (1 + fx_drift), 2)
 
-# --- Exception 5: Corporate action / DRP timing lag — 1 AU equity ---
+# --- Exception 5: Corporate action / DRP timing lag, 1 AU equity ---
 idx.loc["AU_EQ_CBA", "quantity"] = idx.loc["AU_EQ_CBA", "quantity"] - 45
 idx.loc["AU_EQ_CBA", "market_value"] = round(idx.loc["AU_EQ_CBA", "quantity"] * idx.loc["AU_EQ_CBA", "unit_price"], 2)
 
-# --- Exception 6: Unlisted / illiquid asset valuation lag — 2 alternatives ---
+# --- Exception 6: Unlisted / illiquid asset valuation lag, 2 alternatives ---
 unlisted_lag_ids = ["ALT_INF_MEL", "ALT_PE_COLLINS"]
 for sid in unlisted_lag_ids:
     stale_factor = np.random.uniform(0.90, 0.95)
     idx.loc[sid, "market_value"] = round(idx.loc[sid, "market_value"] * stale_factor, 2)
 
-# --- Exception 7: Bond coupon timing lag — 1 fixed income holding ---
+# --- Exception 7: Bond coupon timing lag, 1 fixed income holding ---
 idx.loc["FI_CORP_TLS", "market_value"] = round(idx.loc["FI_CORP_TLS", "market_value"] * 0.998, 2)
 
 custodian_df = idx.reset_index()
