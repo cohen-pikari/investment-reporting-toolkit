@@ -1,38 +1,38 @@
 # Investment Operations Reporting Toolkit
 
-**In plain terms:** this project checks whether a fund's own records of what it owns match an independent, outside record of the same holdings — and if they don't match, it works out why, and whether it's a real problem or just expected timing. This is a genuine, everyday function inside investment operations teams.
+**In plain terms:** this project checks whether a fund's own records of what it owns match an independent, outside record of the same holdings. If they don't match, it works out why, and whether it's a real problem or just expected timing. This is a genuine, everyday function inside investment operations teams.
 
-An automated multi-asset data reconciliation and exception-handling engine built in Python and SQL. This toolkit simulates the core daily control function of an institutional investment operations desk — auditing a fund's internal ledger (**Investment Book of Record / IBOR**) against an independent custodian's records (**Custody Book of Record / CBOR**) across a realistic, multi-asset synthetic portfolio.
+An automated multi-asset data reconciliation and exception-handling engine built in Python and SQL. This toolkit simulates the core daily control function of an institutional investment operations desk: auditing a fund's internal ledger (**Investment Book of Record / IBOR**) against an independent custodian's records (**Custody Book of Record / CBOR**) across a realistic, multi-asset synthetic portfolio.
 
 ## Project Scope & Operational Impact
 
-In institutional asset management, multi-ledger data discrepancies are a structural inevitability — driven by timing differences, corporate action lags, FX conversion timing, illiquid asset valuation cycles, and settlement drops. Left unchecked, unresolved breaks propagate into net asset value (NAV) updates and daily pricing runs, exposing funds to mispriced investor entry/exit points and regulatory reporting failures.
+In institutional asset management, multi-ledger data discrepancies are a structural inevitability, driven by timing differences, corporate action lags, FX conversion timing, illiquid asset valuation cycles, and settlement drops. Left unchecked, unresolved breaks propagate into net asset value (NAV) updates and daily pricing runs, exposing funds to mispriced investor entry/exit points and regulatory reporting failures.
 
 This repository models the automated control layer that intercepts, classifies, and quantifies these discrepancies before they compromise downstream accounting and reporting.
 
 ## Portfolio Scope
 
-The synthetic dataset spans **~34 positions across five asset classes** — AU Equities, US Equities, Fixed Income, Unlisted/Alternatives, and Cash — deliberately mirroring the breadth of a real institutional superannuation or diversified fund portfolio, rather than a single hand-picked example.
+The synthetic dataset spans **~34 positions across five asset classes** (AU Equities, US Equities, Fixed Income, Unlisted/Alternatives, and Cash), deliberately mirroring the breadth of a real institutional superannuation or diversified fund portfolio, rather than a single hand-picked example.
 
 ## Core Technical Features
 
-- **Multi-asset outer-join reconciliation** — vectorised pandas merge logic (no row-by-row loops) ensures the same code scales cleanly from a handful of positions to a full institutional portfolio, with positions missing from either side preserved and flagged, never silently dropped.
-- **Structured exception taxonomy** — automatically classifies breaks into: cash balance breaks, quantity breaks, pricing breaks, FX valuation timing differences, corporate action (DRP) timing lags, unlisted/illiquid asset valuation lags, and bond coupon timing lags.
-- **Threshold-based judgment logic** — distinguishes a genuine pricing break from an expected FX timing variance using a defined tolerance band, mirroring how a real reconciliation control avoids false-alarm escalation on a security's underlying currency conversion timing rather than a real error.
-- **SQL risk warehouse** — reconciliation output is loaded into a relational SQLite warehouse, enabling independent SQL-based aggregation: total capital at risk, exception concentration by type and by asset class, and Straight-Through Processing (STP) rate — a standard operational KPI for a reconciliation function.
-- **Audit-ready output** — formatted, colour-coded Excel exception reports and an executive MIS dashboard, generated directly from the reconciliation output.
+- **Multi-asset outer-join reconciliation**: vectorised pandas merge logic (no row-by-row loops) ensures the same code scales cleanly from a handful of positions to a full institutional portfolio, with positions missing from either side preserved and flagged, never silently dropped.
+- **Structured exception taxonomy**: automatically classifies breaks into cash balance breaks, quantity breaks, pricing breaks, FX valuation timing differences, corporate action (DRP) timing lags, unlisted/illiquid asset valuation lags, and bond coupon timing lags.
+- **Threshold-based judgment logic**: distinguishes a genuine pricing break from an expected FX timing variance using a defined tolerance band, mirroring how a real reconciliation control avoids false-alarm escalation on a security's underlying currency conversion timing rather than a real error.
+- **SQL risk warehouse**: reconciliation output is loaded into a relational SQLite warehouse, enabling independent SQL-based aggregation: total capital at risk, exception concentration by type and by asset class, and Straight-Through Processing (STP) rate, a standard operational KPI for a reconciliation function.
+- **Audit-ready output**: formatted, colour-coded Excel exception reports and an executive MIS dashboard, generated directly from the reconciliation output.
 
 ## System Architecture
 
-- **`data/`** — synthetic portfolio & warehouse data (generated)
-- **`output/`** — generated exception reports, dashboards, warehouse extracts
+- **`data/`**: synthetic portfolio & warehouse data (generated)
+- **`output/`**: generated exception reports, dashboards, warehouse extracts
 - **`scripts/`**
-  - `generate_synthetic_data.py` — builds the synthetic multi-asset IBOR/CBOR datasets
-  - `initialize_warehouse.py` — loads reconciliation output into SQLite
-  - `query_warehouse.sql` — SQL risk aggregation queries (capital at risk, STP rate, concentration)
-  - `generate_ops_dashboard.py` — renders the executive MIS dashboard
-  - `generate_excel_sheets.py` — generates the formatted exception report
-  - `generate_sql_summary.py` — generates
+  - `generate_synthetic_data.py`: builds the synthetic multi-asset IBOR/CBOR datasets
+  - `initialize_warehouse.py`: loads reconciliation output into SQLite
+  - `query_warehouse.sql`: SQL risk aggregation queries (capital at risk, STP rate, concentration)
+  - `generate_ops_dashboard.py`: renders the executive MIS dashboard
+  - `generate_excel_sheets.py`: generates the formatted exception report
+  - `generate_sql_summary.py`: generates the SQL-driven management summary workbook
 
 ## Execution Guide
 
@@ -55,7 +55,7 @@ Output files land in `/output`.
 
 ## Data Provenance
 
-All data in this repository — portfolio holdings, prices, and quantities — is entirely **synthetic and fictional**, generated by `generate_synthetic_data.py`. No real institutional, client, or employer data is used, referenced, or represented at any point in this project.
+All data in this repository (portfolio holdings, prices, and quantities) is entirely **synthetic and fictional**, generated by `generate_synthetic_data.py`. No real institutional, client, or employer data is used, referenced, or represented at any point in this project.
 
 ## Sample Output
 
@@ -65,5 +65,4 @@ All data in this repository — portfolio holdings, prices, and quantities — i
 
 This project is a personal, self-directed build demonstrating investment operations concepts using entirely synthetic data. It does not represent, replicate, or disclose any proprietary systems, data, or processes belonging to any employer, past or present.
 
----
-*Maintained by Cohen Pikari ([github.com/cohen-pikari](https://github.com/cohen-pikari))*
+Maintained by Cohen Pikari (github.com/cohen-pikari)
