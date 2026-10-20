@@ -5,7 +5,7 @@ CYAN='\033[0;36m'
 CLEAR='\033[0m'
 
 echo -e "${BLUE}====================================================================${CLEAR}"
-echo -e "${BLUE} INVESTMENT OPERATIONS REPORTING TOOLKIT — FULL PIPELINE RUN ${CLEAR}"
+echo -e "${BLUE} INVESTMENT OPERATIONS REPORTING TOOLKIT: FULL PIPELINE RUN ${CLEAR}"
 echo -e "${BLUE}====================================================================${CLEAR}"
 
 echo -e "\n${CYAN}[STEP 1/5] Generating synthetic multi-asset portfolio dataset...${CLEAR}"
@@ -25,5 +25,5 @@ echo -e "\n${CYAN}[STEP 5/5] Compiling SQL-driven management summary report...${
 python3 scripts/generate_sql_summary.py
 
 echo -e "\n${GREEN}====================================================================${CLEAR}"
-echo -e "${GREEN} PIPELINE COMPLETE — all artifacts ready in /output ${CLEAR}"
+echo -e "${GREEN} PIPELINE COMPLETE: all artifacts ready in /output ${CLEAR}"
 echo -e "${GREEN}====================================================================${CLEAR}"
