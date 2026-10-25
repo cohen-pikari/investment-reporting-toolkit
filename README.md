@@ -2,37 +2,35 @@
 
 [![Tests](https://github.com/cohen-pikari/investment-reporting-toolkit/actions/workflows/tests.yml/badge.svg)](https://github.com/cohen-pikari/investment-reporting-toolkit/actions/workflows/tests.yml)
 
-A fund's internal ledger and its custodian's records rarely agree perfectly on any given day — timing lags, FX conversion windows, and corporate action processing keep the two books drifting apart. Reconciling them, and working out which gaps are real problems versus expected noise, is one of the most routine but consequential jobs on an institutional operations desk. This project builds that control function from scratch in Python and SQL.
+A simulated institutional operations desk: generates a fund's daily reconciliation and exception reporting end to end, built as practice for the control function every fund ultimately depends on to know what it actually holds.
 
-It audits a fund's Investment Book of Record (**IBOR**) against an independent Custody Book of Record (**CBOR**) across a synthetic multi-asset portfolio, then classifies, quantifies, and reports every discrepancy it finds.
+## Overview
 
-## Why it matters
-
-Left unresolved, ledger breaks flow straight into NAV pricing and investor entry/exit values — which is exactly the kind of error that turns into a regulatory reporting problem. Every institutional fund runs some version of this control daily; this repo models it end to end, rather than taking a single hand-picked example.
+A fund keeps its own record of what it owns; an independent custodian keeps a separate one. The two rarely match perfectly: trades settle late, prices update on different schedules, corporate actions land at different times. Someone has to work out daily which gaps matter and which are just timing. This project automates that: it compares two sets of position records (synthetic here, standing in for a real fund), classifies every mismatch, judges what needs attention, and produces the same reports a real ops team would use (exception file, dashboard, summary). Some version of this runs inside every asset manager, hedge fund, super fund, insurer, and custodian. No coding needed to read the result below.
 
 ## Portfolio
 
-~34 positions across five asset classes — AU equities, US equities, fixed income, unlisted/alternatives, and cash — built to resemble the spread of a real diversified super fund.
+~34 positions across five asset classes (AU equities, US equities, fixed income, unlisted/alternatives, and cash), built to resemble a real diversified super fund rather than a toy example.
 
 ## What it does
 
-- **Reconciliation**: vectorised pandas merges (no row-by-row loops) scale from a handful of positions to a full portfolio, and anything missing from either side stays visible instead of being silently dropped.
-- **Exception classification**: sorts breaks into cash, quantity, pricing, FX timing, corporate action (DRP) lag, illiquid valuation lag, and bond coupon timing.
-- **Tolerance-based judgment**: a defined threshold band separates a genuine pricing break from ordinary FX timing noise — the same logic a real reconciliation control uses to avoid false-alarm escalation.
-- **SQL warehouse**: results load into SQLite for independent querying — capital at risk, exception concentration by type and asset class, and Straight-Through Processing (STP) rate, the standard ops KPI.
-- **Reporting**: colour-coded Excel exception reports and an executive MIS dashboard, generated straight from the reconciliation output.
+- Compares the fund's records against the custodian's automatically, flagging anything missing or mismatched on either side, and scales cleanly from a handful of positions to a full portfolio.
+- Classifies every mismatch into the categories a real exception queue uses (cash, quantity, pricing, FX timing, corporate action lag, illiquid valuation lag, bond coupon timing) instead of lumping everything together as "an error."
+- Tells a genuine pricing break apart from ordinary FX timing noise using a defined threshold, the same judgment call that stops a real problem flowing quietly into NAV and stops a false alarm wasting someone's morning.
+- Loads results into a small SQL database so they can be queried on their own: total capital at risk, where exceptions cluster, and the Straight-Through Processing rate (the standard measure of how clean the day was).
+- Produces the actual outputs an ops team would use: a colour-coded Excel exception report and an executive dashboard.
 
 ## Structure
 
-- `data/` — synthetic portfolio & warehouse data (generated)
-- `output/` — exception reports, dashboards, warehouse extracts
+- `data/`: synthetic portfolio & warehouse data (generated)
+- `output/`: exception reports, dashboards, warehouse extracts
 - `scripts/`
-  - `generate_synthetic_data.py` — builds the IBOR/CBOR datasets
-  - `initialize_warehouse.py` — loads reconciliation output into SQLite
-  - `query_warehouse.sql` — risk aggregation queries
-  - `generate_ops_dashboard.py` — renders the executive dashboard
-  - `generate_excel_sheets.py` — formatted exception report
-  - `generate_sql_summary.py` — SQL-driven management summary
+  - `generate_synthetic_data.py`: builds the IBOR/CBOR datasets
+  - `initialize_warehouse.py`: loads reconciliation output into SQLite
+  - `query_warehouse.sql`: risk aggregation queries
+  - `generate_ops_dashboard.py`: renders the executive dashboard
+  - `generate_excel_sheets.py`: formatted exception report
+  - `generate_sql_summary.py`: SQL-driven management summary
 
 ## Running it
 
@@ -42,18 +40,22 @@ Needs Python 3.x with `pandas`, `numpy`, `openpyxl`, `matplotlib`, and `seaborn`
 ./run_toolkit.sh
 ```
 
-This generates a fresh synthetic portfolio, runs the reconciliation and classifies every exception, loads everything into SQLite, and builds the dashboard, Excel report, and SQL summary. Output lands in `/output`.
+Generates a fresh portfolio, runs the reconciliation, classifies exceptions, loads the warehouse, and builds the dashboard, Excel report, and SQL summary. Output lands in `/output`.
 
 ## Data
 
-Everything here — holdings, prices, quantities — is synthetic, generated by `generate_synthetic_data.py`. No real institutional, client, or employer data appears anywhere in this project.
+Everything here (holdings, prices, quantities) is synthetic, generated by `generate_synthetic_data.py`. No real institutional, client, or employer data is used anywhere in this project.
 
 ## Sample output
 
 ![Daily Operations MIS Dashboard](https://github.com/cohen-pikari/investment-reporting-toolkit/raw/main/output/daily_ops_mis_dashboard.png)
 
+## Related work
+
+Three different layers of the same investment function: [investment-research-vault](https://github.com/cohen-pikari/investment-research-vault) decides what to own, [price-discovery-lab](https://github.com/cohen-pikari/price-discovery-lab) works out what hard-to-price assets are actually worth, and this one confirms, day to day, that what's recorded is actually real.
+
 ## Disclaimer
 
-A personal, self-directed build demonstrating investment operations concepts with entirely synthetic data. It doesn't represent, replicate, or disclose any proprietary systems, data, or processes from any employer, past or present.
+A personal, self-directed build demonstrating investment operations concepts with entirely synthetic data. Doesn't represent, replicate, or disclose any proprietary systems, data, or processes from any employer, past or present.
 
 Maintained by Cohen Pikari (github.com/cohen-pikari)
