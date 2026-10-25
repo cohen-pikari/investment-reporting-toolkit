@@ -20,6 +20,8 @@ A fund keeps its own record of what it owns; an independent custodian keeps a se
 - Loads results into a small SQL database so they can be queried on their own: total capital at risk, where exceptions cluster, and the Straight-Through Processing rate (the standard measure of how clean the day was).
 - Produces the actual outputs an ops team would use: a colour-coded Excel exception report and an executive dashboard.
 
+For the reasoning behind the classification order, see [METHODOLOGY.md](METHODOLOGY.md). For a full trace of one real exception through the actual code, see [WORKED_EXAMPLE.md](WORKED_EXAMPLE.md).
+
 ## Structure
 
 - `data/`: synthetic portfolio & warehouse data (generated)
