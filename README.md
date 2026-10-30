@@ -27,7 +27,7 @@ For the reasoning behind the classification order, see [METHODOLOGY.md](METHODOL
 - `data/`: synthetic portfolio & warehouse data (generated)
 - `output/`: exception reports, dashboards, warehouse extracts
 - `scripts/`
-  - `generate_synthetic_data.py`: builds the IBOR/CBOR datasets
+  - `generate_synthetic_data.py`: builds the two synthetic record sets (the fund's internal investment book, "IBOR", and the custodian's book, "CBOR")
   - `initialize_warehouse.py`: loads reconciliation output into SQLite
   - `query_warehouse.sql`: risk aggregation queries
   - `generate_ops_dashboard.py`: renders the executive dashboard
@@ -59,5 +59,7 @@ Three different layers of the same investment function: [investment-research-vau
 ## Disclaimer
 
 A personal, self-directed build demonstrating investment operations concepts with entirely synthetic data. Doesn't represent, replicate, or disclose any proprietary systems, data, or processes from any employer, past or present.
+
+Parts of this project were built with AI assistance (Claude). I set the design, review the output and run the work.
 
 Maintained by Cohen Pikari (github.com/cohen-pikari)
