@@ -61,6 +61,7 @@ This is a simulation for practising the reasoning behind a reconciliation, not a
 - **Corporate actions and settlement are approximated.** A small quantity shift is treated as a likely dividend reinvestment lag. There is no corporate action feed and no trade or settlement date handling.
 - **No workflow or audit trail.** There is no break ownership, comments, sign-off, escalation or maker-checker control, which is most of what a live operations team actually relies on.
 - **Light testing and untested at scale.** Two integrity tests (the internal ledger is never altered, no position is dropped) and no run beyond about 34 positions.
+- **Stops at classification.** It does not interpret a break or recommend a next step: which team owns it, what to check first, or when it should be escalated. That judgement is what a person in the seat adds.
 - **SQL is aggregation only.** The reconciliation itself runs in pandas. The SQL layer summarises the results.
 
 **Possible next steps**
@@ -68,6 +69,7 @@ This is a simulation for practising the reasoning behind a reconciliation, not a
 - Identifier mapping and a simple security master.
 - Separate trade date and settlement date handling.
 - A break log with an owner and a status.
+- A suggested next action and owner for each exception type, and an escalation point such as an age or value threshold.
 - Tests for tolerance edge cases, and a comparison against published FX rates.
 
 ## Data
