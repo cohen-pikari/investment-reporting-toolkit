@@ -14,7 +14,7 @@ A fund keeps its own record of what it owns; an independent custodian keeps a se
 
 ## What it does
 
-- Compares the fund's records against the custodian's automatically, flagging anything missing or mismatched on either side, and scales cleanly from a handful of positions to a full portfolio.
+- Compares the fund's records against the custodian's automatically, flagging anything missing or mismatched on either side. It has only been run on the roughly 34-position synthetic portfolio here, so see Limitations below before assuming it scales.
 - Classifies every mismatch into the categories a real exception queue uses (cash, quantity, pricing, FX timing, corporate action lag, illiquid valuation lag, bond coupon timing) instead of lumping everything together as "an error."
 - Tells a genuine pricing break apart from ordinary FX timing noise using a defined threshold, the same judgment call that stops a real problem flowing quietly into NAV and stops a false alarm wasting someone's morning.
 - Loads results into a small SQL database so they can be queried on their own: total capital at risk, where exceptions cluster, and the Straight-Through Processing rate (the standard measure of how clean the day was).
@@ -43,6 +43,32 @@ Needs Python 3.x with `pandas`, `numpy`, `openpyxl`, `matplotlib`, and `seaborn`
 ```
 
 Generates a fresh portfolio, runs the reconciliation, classifies exceptions, loads the warehouse, and builds the dashboard, Excel report, and SQL summary. Output lands in `/output`.
+
+## Limitations and next steps
+
+This is a simulation for practising the reasoning behind a reconciliation, not a replacement for one run on a live portfolio. What it can and can't do:
+
+**What it is good for**
+- Showing how a reconciliation is structured: two independent records, a defined order of checks, and a classification of every difference.
+- Showing why most breaks are timing differences and how a control avoids escalating them as errors.
+- Giving a working, tested example to explain and discuss end to end.
+
+**What it does not do**
+- **One day only.** It compares a single statement date. Real breaks are tracked over time: how long each has been open, whether it is getting worse, and who owns it. None of that exists here.
+- **Known answers.** The generator injects seven categories of break on purpose, so the engine is checked against differences I already know about. Real data produces breaks nobody planned for.
+- **Matching by security ID only.** It joins on one clean identifier. Real reconciliations deal with mismatched identifiers across systems, a security master, several accounts and custodians, and settled versus traded positions.
+- **Heuristic classification.** The categories come from hand-set rules and thresholds (for example the 0.8% FX band), not from calibration on real data. An "FX valuation break" is labelled because the holding is non-AUD and the gap is small. The engine does not check actual FX rates.
+- **Corporate actions and settlement are approximated.** A small quantity shift is treated as a likely dividend reinvestment lag. There is no corporate action feed and no trade or settlement date handling.
+- **No workflow or audit trail.** There is no break ownership, comments, sign-off, escalation or maker-checker control, which is most of what a live operations team actually relies on.
+- **Light testing and untested at scale.** Two integrity tests (the internal ledger is never altered, no position is dropped) and no run beyond about 34 positions.
+- **SQL is aggregation only.** The reconciliation itself runs in pandas. The SQL layer summarises the results.
+
+**Possible next steps**
+- Multi-day data so breaks can be aged and tracked until cleared.
+- Identifier mapping and a simple security master.
+- Separate trade date and settlement date handling.
+- A break log with an owner and a status.
+- Tests for tolerance edge cases, and a comparison against published FX rates.
 
 ## Data
 
